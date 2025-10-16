@@ -35,9 +35,6 @@ class RayTracerGPU:
         self.width = width
         self.height = height
         self.compute_shader = ComputeShaderProgram(self.ctx, "shaders/raytracing.comp")
-        self.compute_shader.set_uniform("cameraPosition", tuple(self.camera.position))
-        self.compute_shader.set_uniform("inverseViewMatrix", self.camera.get_inverse_view_matrix())
-        self.compute_shader.set_uniform("fieldOfView", float(self.camera.fov))
         self.output_graphics = output_graphics
 
         self.texture_unit = 0
@@ -45,9 +42,9 @@ class RayTracerGPU:
         self.output_graphics.update_texture("u_texture", self.output_texture.image_data)
         self.output_graphics.bind_to_image("u_texture", read=False, write=True)
 
-        self.compute_shader.set_uniform("cameraPosition", self.camera.position)
+        self.compute_shader.set_uniform("cameraPosition", tuple(self.camera.position))
         self.compute_shader.set_uniform("inverseViewMatrix", self.camera.get_inverse_view_matrix())
-        self.compute_shader.set_uniform("fielOfView", self.camera.fov)
+        self.compute_shader.set_uniform("fielOfView", float(self.camera.fov))
 
     def resize(self, width, height):
         self.width, self.height = width, height

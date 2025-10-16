@@ -1,3 +1,5 @@
+import sys, os
+sys.modules.pop("model", None)
 from window import Window
 from texture import Texture
 from material import Material, StandardMaterial

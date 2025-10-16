@@ -9,8 +9,14 @@ class Graphics:
         self.__material = material   # cambie la definicion 
        
         self.__vbo = self.create_buffers()
-        self.__ibo = ctx.buffer(model.indices.tobytes())
-        self.__vao = ctx.vertex_array(material.shader_program.prog, [*self.__vbo], self.__ibo)
+        self.__ibo = self.__ctx.buffer(model.indices.tobytes())
+
+        vao_content = []
+        for attr_name, vbo in self.__vbo:
+            vao_content.append((vbo, '3f', attr_name))  # formato de atributo (3 floats)
+
+        self.__vao = self.__ctx.vertex_array(material.shader_program.prog, vao_content, self.__ibo)
+
 
         self.__textures = self.load_textures(material.textures_data)
 
@@ -18,10 +24,10 @@ class Graphics:
         buffers = []
         shader_attributes = self.__material.shader_program.attributes  # usar self.material
 
-        for attribute in self.__model.vertex_layout.get_attributes():
-            if attribute.name in shader_attributes:
-                vbo = self.__ctx.buffer(attribute.array.tobytes())
-                buffers.append((vbo, attribute.format, attribute.name))
+        for attr_name, attr_data in self.__model.vertex_layout.get_attributes():
+            if attr_name in shader_attributes:
+                vbo = self.__ctx.buffer(attr_data.astype('f4').tobytes())  # 🔧 corregido: __ctx
+                buffers.append((attr_name, vbo)) 
         return buffers
 
     def load_textures(self, textures_data):
