@@ -4,21 +4,18 @@ layout(local_size_x = 16, local_size_y = 16) in;
 layout(rgba32f, binding = 0) uniform image2D outputImage;
 
 layout(std430, binding = 0) buffer Models { mat4 modelMatrices[]; };
-layout(std430, binding = 1) buffer InvModels { mat4 inverseModelMatrices[]; };
+layout(std430, binding = 1) buffer InvModels{ mat4 inverseModelMatrices[]; };
 layout(std430, binding = 2) buffer Materials { vec4 materialData[]; };
 layout(std430, binding = 3) buffer BVH { vec4 bvhNodes[]; };
 
 uniform vec3 cameraPosition;
 uniform mat4 inverseViewMatrix;
 uniform float fieldOfView;
-
 const float EPS = 1e-4;
-const int MAX_RAY_BOUNCES = 1;
-const vec3 LIGHT_DIR = normalize(vec3(-0.5, -1.0, -0.4));
+const int MAX_RAY_BOUNCES = 3;
+conts vec3 LIGHT_DIRECTION = normalize(vec3(0.5, 1.0, 0.1));
 const vec3 LIGHT_COLOR = vec3(1.0, 1.0, 1.0);
 
-// ------------------------------------------------------------
-// Estructura de impacto
 struct RayHit {
     bool didHit;
     float distance;
@@ -28,157 +25,168 @@ struct RayHit {
     float reflectivity;
 };
 
-// ------------------------------------------------------------
-// Intersección con AABB
-bool intersectAxisAlignedBox(vec3 ro, vec3 rd,
-                             vec3 boxMin, vec3 boxMax,
-                             out float tN, out float tF)
-{
-    vec3 t0 = (boxMin - ro) / rd;
-    vec3 t1 = (boxMax - ro) / rd;
-    vec3 tmin = min(t0, t1);
-    vec3 tmax = max(t0, t1);
-    tN = max(max(tmin.x, tmin.y), tmin.z);
-    tF = min(min(tmax.x, tmax.y), tmax.z);
-    return tF >= max(tN, 0.0);
+bool intersectAxisAlignedBox(vec3 rayOrigin, vec3 rayDirection,
+                            vec3 boxMin, vec3 boxMax,
+                            out float timeNear, out float timeFar){
+    vec3 timeAtMinPlane = (boxMin - rayOrigin) / rayDirection;
+    vec3 timeAtMaxPlane = (boxMax - rayOrigin) / rayDirection;
+    vec3 timeMin = min(timeAtMinPlane, timeAtMaxPlane);
+    vec3 timeMax = max(timeAtMinPlane, timeAtMaxPlane);
+    timeNear = max(max(timeMin.x, timeMin.y), timeMin.z);
+    timeFar = min(min(timeMax.x, timeMax.y), timeMax.z);
+    return timeFar >= max(timeNear, 0.0);
 }
 
-// ------------------------------------------------------------
-// Intersección con caja orientada (OBB)
-bool intersectOrientedBox(int idx, vec3 roW, vec3 rdW,
-                          out float tHit, out vec3 pHit, out vec3 nHit)
-{
-    mat4 invM = inverseModelMatrices[idx];
-    // 🔧 fallback si la inversa no está cargada
-    if (invM[3][3] == 0.0)
-        invM = inverse(modelMatrices[idx]);
+bool intersectOrientedBox(int objectIndex, vec3 rayOriginWorld, vec3 rayDirectionWorld,
+                          out float hitDistance, out vec3 hitPosition, out vec3 hitNormal) {
+    mat4 inverseTransform = inverseModelMatrices[objectIndex];
+    vec3 rayOriginLocal = (inverseTransform * vec4(rayOriginWorld, 1.0)).xyz;
+    vec3 rayDirectionLocal = normalize((inverseTransform * vec4(rayDirectionWorld, 0.0)).xyz);
 
-    vec3 roL = (invM * vec4(roW, 1.0)).xyz;
-    vec3 rdL = normalize((invM * vec4(rdW, 0.0)).xyz);
 
-    float tN, tF;
-    if (!intersectAxisAlignedBox(roL, rdL, vec3(-1.0), vec3(1.0), tN, tF))
-        return false;
+    float timeNear, timeFar;
+    vec3 boxMinLocal = vec3(-1.0);
+    vec3 boxMaxLocal = vec3(1.0);
+    bool intercects = intersectAxisAlignedBox(rayOriginLocal, rayDirectionLocal, boxMinLocal, boxMaxLocal, timeNear, timeFar);
+   
+    if (!intercects) return false;
 
-    float tLocal = (tN > EPS) ? tN : tF;
-    vec3 hitLocal = roL + rdL * tLocal;
 
-    vec3 distPos = abs(hitLocal - vec3(1.0));
-    vec3 distNeg = abs(hitLocal + vec3(1.0));
-    vec3 minDist = min(distPos, distNeg);
-    float close = min(min(minDist.x, minDist.y), minDist.z);
+    float timeLocal = (timeNear > EPS) ? timeNear : timeFar;
+    vec3 hitPositionLocal = rayOriginLocal + rayDirectionLocal * timeLocal;
 
-    vec3 nLocal = vec3(0.0);
-    if (minDist.x == close) nLocal = vec3(sign(hitLocal.x), 0, 0);
-    else if (minDist.y == close) nLocal = vec3(0, sign(hitLocal.y), 0);
-    else nLocal = vec3(0, 0, sign(hitLocal.z));
 
-    mat4 M = modelMatrices[idx];
-    mat3 N = transpose(inverse(mat3(M)));
-    nHit = normalize(N * nLocal);
-    pHit = (M * vec4(hitLocal, 1.0)).xyz;
-    tHit = length(pHit - roW);
-    return true;
+    vec3 distanceToPositiveFaces = abs(hitPositionLocal - vec3(1.0));
+    vec3 distanceToNegativeFaces = abs(hitPositionLocal + vec3(1.0));
+    vec3 minDistance = min(distanceToPositiveFaces, distanceToNegativeFaces);
+    float closestFaceDistance = min(min(minDistance.x, minDistance.y), minDistance.z);
+   
+    vec3 normalLocal = vec3(0.0);
+    if (minDistance.x == closestFaceDistance)
+        normalLocal = vec3(sign(hitPositionLocal.x), 0, 0);
+    else if (minDistance.y == closestFaceDistance)
+        normalLocal = vec3(0, sign(hitPositionLocal.y), 0);
+    else
+        normalLocal = vec3(0, 0, sign(hitPositionLocal.z));
+
+
+    mat3 normalTransform = transpose(inverse(mat3(modelMatrices[objectIndex])));
+    hitNormal = normalize(normalTransform * normalLocal);
+    hitPosition = (modelMatrices[objectIndex] * vec4(hitPositionLocal, 1.0)).xyz;
+    hitDistance = dot(hitPosition - rayOriginWorld, rayDirectionWorld);
+   
+    return hitDistance > EPS;
 }
 
-// ------------------------------------------------------------
-// Recorrido del "BVH" simplificado
-RayHit traceScene(vec3 ro, vec3 rd)
-{
-    RayHit best;
-    best.didHit = false;
-    best.distance = 1e20;
+RayHit traverseBoundingVolumeHierarchy(vec3 rayOrigin, vec3 rayDirection) {
+    RayHit closestHit;
+    closestHit.didHit = false;
+    closestHit.distance = 1e20;
 
-    for (int i = 0; i < materialData.length(); i++) {
-        float t; vec3 p; vec3 n;
-        if (intersectOrientedBox(i, ro, rd, t, p, n)) {
-            if (t < best.distance && t > EPS) {
-                best.didHit = true;
-                best.distance = t;
-                best.position = p;
-                best.normal = n;
-                vec4 mat = materialData[i];
-                best.color = mat.rgb;
-                best.reflectivity = mat.a;
+
+    int nodeStack[32];
+    int stackPointer = 0;
+    nodeStack[stackPointer++] = 0;
+
+
+    while (stackPointer > 0) {
+        int nodeIndex = nodeStack[--stackPointer];
+        vec4 boundingBoxMin = bvhNodes[nodeIndex];
+        vec4 boundingBoxMax = bvhNodes[nodeIndex + 1];
+
+
+        float timeNear, timeFar;
+        bool intersects = intersectAxisAlignedBox(rayOrigin, rayDirection, boundingBoxMin.xyz, boundingBoxMax.xyz, timeNear, timeFar);
+       
+        if (!intersects || timeNear >= closestHit.distance)
+            continue;
+
+
+        int leftChildIndex = int(boundingBoxMin.w);
+        int rightChildOrPrimitiveIndex = int(boundingBoxMax.w);
+
+
+        if (rightChildOrPrimitiveIndex >= 0) {
+            float hitDist;
+            vec3 hitPos;
+            vec3 hitNorm;
+            if (intersectOrientedBox(rightChildOrPrimitiveIndex, rayOrigin, rayDirection,
+                                     hitDist, hitPos, hitNorm) && hitDist < closestHit.distance) {
+                // Acá va el código para darle valor a closestHit !!
+                closestHit.didHit = true;
+                closestHit.distance = hitDist;
+                closestHit.position = hitPos;
+                closestHit.normal = hitNorm;
+                vec4 material = materialData[rightChildOrPrimitiveIndex];
+                closestHit.color = material.rgb;
+                closestHit.reflectivity = material.a;
             }
-        }
-    }
-    return best;
-}
-
-// ------------------------------------------------------------
-// Sombra
-float computeShadow(vec3 pos, vec3 normal)
-{
-    vec3 ro = pos + normal * EPS * 2.0;
-    vec3 rd = -LIGHT_DIR;
-    for (int i = 0; i < materialData.length(); i++) {
-        float t; vec3 p; vec3 n;
-        if (intersectOrientedBox(i, ro, rd, t, p, n))
-            return 0.3; // en sombra
-    }
-    return 1.0;
-}
-
-// ------------------------------------------------------------
-// Color del cielo
-vec3 skyColor(vec3 rd)
-{
-    float t = 0.5 * (rd.y + 1.0);
-    return mix(vec3(0.6, 0.8, 1.0), vec3(0.05, 0.1, 0.2), t);
-}
-
-// ------------------------------------------------------------
-// Shading iterativo (sin recursión)
-vec3 shadeIterative(vec3 ro, vec3 rd)
-{
-    vec3 color = vec3(0.0);
-    vec3 mask = vec3(1.0);
-
-    for (int bounce = 0; bounce <= MAX_RAY_BOUNCES; bounce++) {
-        RayHit hit = traceScene(ro, rd);
-        if (!hit.didHit) {
-            color += mask * skyColor(rd);
-            break;
-        }
-
-        float diff = max(dot(hit.normal, -LIGHT_DIR), 0.0);
-        float shadow = computeShadow(hit.position, hit.normal);
-        vec3 diffuse = diff * hit.color * LIGHT_COLOR * shadow;
-        vec3 ambient = 0.15 * hit.color;
-        color += mask * (diffuse + ambient);
-
-        if (bounce < MAX_RAY_BOUNCES && hit.reflectivity > 0.0) {
-            mask *= hit.reflectivity;
-            ro = hit.position + hit.normal * EPS * 2.0;
-            rd = reflect(rd, hit.normal);
         } else {
-            break;
+            if (leftChildIndex >= 0)
+                nodeStack[stackPointer++] = leftChildIndex * 2;
+            int rightChildIndex = -rightChildOrPrimitiveIndex - 2;
+            if (rightChildIndex >= 0)
+                nodeStack[stackPointer++] = rightChildIndex * 2;
         }
     }
-    return color;
+    return closestHit;
 }
 
-// ------------------------------------------------------------
-// MAIN
-void main()
-{
-    ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 res = imageSize(outputImage);
-    if (pix.x >= res.x || pix.y >= res.y) return;
+float calculateShadow(vec3 surfacePosition, vec3 surfaceNormal) {
+    vec3 shadowRayOrigin = surfacePosition + surfaceNormal * EPS;
+    return traverseBoundingVolumeHierarchy(shadowRayOrigin, LIGHT_DIRECTION).didHit ? 0.3 : 1.0;
+}
 
-    vec2 uv = (vec2(pix) + 0.5) / vec2(res);
-    vec2 ndc = uv * 2.0 - 1.0;
+vec3 calculateShading(vec3 surfaceColor, vec3 surfacePosition, vec3 surfaceNormal, vec3 viewDirection){
+    float diffuseIntensity = max(dot(surfaceNormal, LIGHT_DIRECTION), 0.0);
+    float specularIntensity = pow(max(dot(normalize(LIGHT_DIRECTION + viewDirection), surfaceNormal), 0.0), 64);
+    float shadowFactor = calculateShadow(surfacePosition, surfaceNormal);
+    float ambientFactor = 0.08;
 
-    float fovAdj = tan(radians(fieldOfView) * 0.5);
-    float aspect = float(res.x) / float(res.y);
-    ndc.x *= aspect * fovAdj;
-    ndc.y *= fovAdj;
+    vec3 ambient = ambientFactor * surfaceColor;
+    vec3 diffuse = diffuseIntensity * surfaceColor;
+    vec3 specular = specularIntensity * LIGHT_COLOR;
+    vec3 shadow = shadowFactor * (diffuse + specular)
 
-    vec3 rdCam = normalize(vec3(ndc, -1.0));
-    vec3 rd = normalize((inverseViewMatrix * vec4(rdCam, 0.0)).xyz);
-    vec3 ro = cameraPosition;
+    vec3 shadedColor = surfaceColor * (ambient + diffuse + specular);
+    return sahdedColor;
+}
 
-    vec3 finalColor = shadeIterative(ro, rd);
-    imageStore(outputImage, pix, vec4(finalColor, 1.0));
+void main(){
+    ivec2 pixelCoords = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imageSize = imageSize(outputImage);
+
+    if (pixelCoords.x >= imageSize.x || pixelCoords.y >= imageSize.y)
+    return;
+
+    vec4 color = vec4(1.0, 0.0, 0.0, 1.0);
+
+    float fovAdjustment = tan(radians(fieldOfView) * 0.5);
+    float aspectRatio = float(imageSize.x) / float(imageSize.y);
+
+    vec2 uv = (vec2(pixelCoords) + 0.5) / vec2(imageSize);
+    vec2 ndc = (uv * 2.0 - 1.0) * fovAdjustment;
+    ndc.x *= aspectRatio;
+
+    vec3 rayDirCamera = vec3(ndc.x, ndc.y, -1.0);
+    rayDirCamera = normalize(rayDirCamera);
+
+    vec3 rayDirection = normalize((inverseViewMatrix * vec4(rayDirCamera, 0.0)).xyz);
+    vec3 rayOrigin = (inverseViewMatrix * vec4(cameraPosition, 1.0)).xyz;
+
+    float hitDist;
+    vec3 hitPos;
+    vec3 hitNorm;
+
+    vec3 finalColor;
+
+    RayHit hit = traverseBoundingVolumeHierarchy(rayOrigin, rayDirection);
+
+    if (hit.didHit){
+        finalColor = calculateShading(hit.color, hit.position, hit.normal, -rayDirection);
+    } else {
+        finalColor = vec3(0.0);
+    }
+
+    imageSize(outputImage, pixelCoords, vec4(finalColor, 1.0));
 }

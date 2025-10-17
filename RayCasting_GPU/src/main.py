@@ -42,8 +42,8 @@ config = scene_configs[SCENE_TYPE]
 window = Window(WIDTH, HEIGHT, f"Basic Graphic Engine - {SCENE_TYPE.upper()}")
 
 
-shader = ShaderProgram(window.ctx, 'shaders/basic.vert', 'shaders/basic.frag')
-shader_sprite = ShaderProgram(window.ctx, 'shaders/sprite.vert', 'shaders/sprite.frag')
+shader = ShaderProgram(window.ctx, '../shaders/basic.vert', '../shaders/basic.frag')
+shader_sprite = ShaderProgram(window.ctx, '../shaders/sprite.vert', '../shaders/sprite.frag')
 
 
 albedo_red = Texture("u_texture", WIDTH, HEIGHT, 3, None, (200, 10, 190))
