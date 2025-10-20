@@ -80,7 +80,7 @@ class ComputeGraphics(Graphics):
 
     def create_primitive(self, primitives):
         amin, amax = self.__model.aabb
-        primitives.append({"aabb_min": [amin.x, amin.y, amin.z], "aabb_max": [amax.x, amax.y, amax.z]})
+        primitives.append({"aabb_min": amin, "aabb_max": amax})
 
     def create_transformation_matrix(self, transformations_matrix, index):
         m = self.__model.get_model_matrix()

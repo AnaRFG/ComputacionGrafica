@@ -1,14 +1,11 @@
-import sys, os
-sys.modules.pop("model", None)
 from window import Window
 from texture import Texture
 from material import Material, StandardMaterial
-from shader_program import ShaderProgram, ComputeShaderProgram
-from scene import Scene, RayScene , RaySceneGPU
+from shader_program import ShaderProgram
+from scene import Scene, RayScene, RaySceneGPU
 from camera import Camera
 from cube import Cube
 from quad import Quad
-
 
 
 WIDTH, HEIGHT = 800, 600
@@ -42,8 +39,8 @@ config = scene_configs[SCENE_TYPE]
 window = Window(WIDTH, HEIGHT, f"Basic Graphic Engine - {SCENE_TYPE.upper()}")
 
 
-shader = ShaderProgram(window.ctx, '../shaders/basic.vert', '../shaders/basic.frag')
-shader_sprite = ShaderProgram(window.ctx, '../shaders/sprite.vert', '../shaders/sprite.frag')
+shader = ShaderProgram(window.ctx, 'shaders/basic.vert', 'shaders/basic.frag')
+shader_sprite = ShaderProgram(window.ctx, 'shaders/sprite.vert', 'shaders/sprite.frag')
 
 
 albedo_red = Texture("u_texture", WIDTH, HEIGHT, 3, None, (200, 10, 190))
@@ -58,9 +55,9 @@ material_ceramic = StandardMaterial(shader, albedo_pearl, reflectivity=0.1)
 material_sprite = Material(shader_sprite, textures_data=[sprite_texture])
 
 
-cube1 = Cube((0, 0, -5), (0, 0, 0), (1, 1, 1), name="Cube1")
-cube2 = Cube((2, 0, -6), (0, 0, 0), (1, 1, 1), name="Cube2")
-quad = Quad((0, -2, -5), (-90, 0, 0), (10, 10, 1), name="Floor", animated=False)
+cube1 = Cube((2, 0, 5), (0, 0, 0), (1, 1, 1), name="Cube1")
+cube2 = Cube((-2, 0, 5), (0, 0, 0), (1, 1, 1), name="Cube2")
+quad = Quad((0, -3, 0), (-90, 0, 0), (10, 15, 1), name="Floor", animated=False)
 sprite = Quad((0, 0, 0), (0, 0, 0), (10, 15, 1), name="Sprite", animated=False, hittable=False)
 
 
