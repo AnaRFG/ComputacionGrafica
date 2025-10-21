@@ -2,10 +2,11 @@ from window import Window
 from texture import Texture
 from material import Material, StandardMaterial
 from shader_program import ShaderProgram
-from scene import Scene, RayScene, RaySceneGPU
+from scene import Scene, RaySceneGPU
 from camera import Camera
 from cube import Cube
 from quad import Quad
+from raytracer import RayTracerGPU
 
 
 WIDTH, HEIGHT = 800, 600
@@ -72,7 +73,7 @@ if SCENE_TYPE == "normal":
 
 
 elif SCENE_TYPE == "cpu":
-    scene = RayScene(window.ctx, camera, WIDTH, HEIGHT)
+    scene = RaySceneGPU(window.ctx, camera, WIDTH, HEIGHT)
     scene.add_object(sprite, material_sprite)
     scene.add_object(cube1, material_plastic)
     scene.add_object(cube2, material_glass)

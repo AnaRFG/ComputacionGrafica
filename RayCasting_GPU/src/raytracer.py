@@ -53,7 +53,7 @@ class RayTracerGPU:
         self.output_texture = Texture("u_texture", width, height, 4, None, (255, 255, 255, 255))
         self.output_graphics.update_texture("u_texture", self.output_texture.image_data)
 
-    def matrix_to_ssbo(self, matrix, binding = 0):
+    def _matrix_to_ssbo(self, matrix, binding = 0):
         buffer = self.ctx.buffer(matrix.tobytes())
         buffer.bind_to_storage_buffer(binding=binding) #tiene que ser igual al computer shader
 

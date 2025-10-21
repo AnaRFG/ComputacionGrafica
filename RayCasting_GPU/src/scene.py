@@ -1,10 +1,9 @@
 import math
 import glm
 import numpy as np
-from graphics import Graphics
+from graphics import ComputeGraphics
 import moderngl
-
-from raytracer import RayTracer
+from raytracer import RayTracerGPU
 
 
 class Scene:
@@ -25,7 +24,7 @@ class Scene:
 
     def add_object(self, model, material):
         self.objects.append(model)
-        self.graphics[model.name] = Graphics(self.ctx, model, material)
+        self.graphics[model.name] = ComputeGraphics(self.ctx, model, material)
 
     def render(self): 
         self.time += 0.01 # en el constructor self.time = 0
@@ -57,7 +56,7 @@ class RaySceneGPU(Scene):
         self.height = height
         self.raytracer = None
 
-        self.output_graphics = Graphics(ctx, output_model, output_material)
+        self.output_graphics = ComputeGraphics(ctx, output_model, output_material)
         self.raytracer = RayTracerGPU(self.ctx, self.camera, self.width, self.height, self.output_graphics)
 
         super().__init__(ctx, camera)
@@ -77,7 +76,7 @@ class RaySceneGPU(Scene):
         self.mats_f = np.zeros((n,4), dtype='f4')
 
         self._update_matrix()
-        self._matrix_to_ssbo()
+        self._matrix_to_ssbo(self.primitives)
 
     def render(self):
         self.time += 0.01
@@ -91,8 +90,21 @@ class RaySceneGPU(Scene):
             self._matrix_to_ssbo()
             self.raytracer.run()
 
+    def _update_matrix(self):
+        self.primitives = []
+
+        for i, (name, graphics) in enumerate(self.graphics.items()):
+            graphics.create_primitive(self.primitives)
+            graphics.create_transformation_matrix(self.models_f, i)
+            graphics.create_inverse_transformation_matrix(self.inv_f, i)
+            graphics.create_material_matrix(self.mats_f, i)
+
     def _matrix_to_ssbo(self, primitives, binding = 3):
         self.raytracer.matrix_to_ssbo(self.models_f, 0)
         self.raytracer.matrix_to_ssbo(self.inv_f, 1)
         self.raytracer.matrix_to_ssbo(self.mats_f, 2)
         self.raytracer.primitives_to_ssbo(self.primitives, 3)
+
+    
+
+        
