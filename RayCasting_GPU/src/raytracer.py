@@ -7,7 +7,7 @@ class RayTracer:
         self.width = width
         self.height = height
         self.framebuffer = Texture(width=width, height=height, channels_amount=3)
-        self.camera.set_sky_colors(top=(16, 150, 222), bottom=(181, 224, 247))  # gradiente cielo
+        self.camera.set_sky_colors(top=(16, 150, 222), bottom=(181, 224, 247))  
 
     def trace_ray(self, ray, objects):
         for obj in objects:
@@ -27,6 +27,9 @@ class RayTracer:
 
     def get_texture(self):
         return self.framebuffer.image_data
+    
+    def start(self):
+        print("Start!")
 
 
 class RayTracerGPU:
@@ -46,14 +49,14 @@ class RayTracerGPU:
 
         self.compute_shader.set_uniform("cameraPosition", tuple(self.camera.position))
         self.compute_shader.set_uniform("inverseViewMatrix", self.camera.get_inverse_view_matrix())
-        self.compute_shader.set_uniform("fielOfView", float(self.camera.fov))
+        self.compute_shader.set_uniform("fieldOfView", float(self.camera.fov))
 
     def resize(self, width, height):
         self.width, self.height = width, height
         self.output_texture = Texture("u_texture", width, height, 4, None, (255, 255, 255, 255))
         self.output_graphics.update_texture("u_texture", self.output_texture.image_data)
 
-    def _matrix_to_ssbo(self, matrix, binding = 0):
+    def matrix_to_ssbo(self, matrix, binding = 0):
         buffer = self.ctx.buffer(matrix.tobytes())
         buffer.bind_to_storage_buffer(binding=binding) #tiene que ser igual al computer shader
 

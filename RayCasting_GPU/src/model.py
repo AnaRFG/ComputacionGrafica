@@ -1,42 +1,45 @@
 import numpy as np
 import glm
 
+class Vertex:
+    def __init__(self, name, format, array):
+        self.__name = name
+        self.__format = format
+        self.__array = array
+
+    @property
+    def name(self):
+        return self.__name
+    @property
+    def format(self):
+        return self.__format    
+    @property
+    def array(self):
+        return self.__array
+    
 class VertexLayout:
-    def __init__(self, attributes):
-        self.attributes = attributes
+    def __init__(self):
+        self.__attributes = []
+
+    def add_attribute(self, name: str, format: str, array):
+        self.__attributes.append(Vertex(name, format,array))
 
     def get_attributes(self):
-        return self.attributes
+        return self.__attributes
 
 
 class Model:
-    def __init__(self, vertices, indices, colors=None, normals=None, texcoords=None):
-        self.vertices = vertices
+    def __init__(self, vertices = None, indices = None, colors = None, normals = None, texcoords = None):
         self.indices = indices
-        self.colors = colors if colors is not None else np.zeros_like(vertices)
-        self.normals = normals if normals is not None else np.zeros_like(vertices)
-        self.texcoords = texcoords if texcoords is not None else np.zeros_like(vertices)
+        self.vertex_layout = VertexLayout()
+        if vertices is not None:
+            self.vertex_layout.add_attribute("in_pos", "3f", vertices)
+        if colors is not None:
+            self.vertex_layout.add_attribute("in_color", "3f", colors)
+        if normals is not None:
+            self.vertex_layout.add_attribute("in_normal", "3f", normals)
+        if texcoords is not None:
+            self.vertex_layout.add_attribute("in_uv", "2f", texcoords)
+   
 
-        # --- Layout de atributos de vértices ---
-        self.vertex_layout = VertexLayout([
-            ("in_pos", self.vertices),
-            ("in_color", self.colors),
-            ("in_normal", self.normals),
-            ("in_uv", self.texcoords)
-        ])
 
-    # Métodos auxiliares
-    def get_vertices(self):
-        return self.vertices
-
-    def get_indices(self):
-        return self.indices
-
-    def get_colors(self):
-        return self.colors
-
-    def get_normals(self):
-        return self.normals
-
-    def get_texcoords(self):
-        return self.texcoords

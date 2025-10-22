@@ -10,7 +10,7 @@ class Window(pyglet.window.Window):
 
     def set_scene(self, scene):
         self.scene = scene
-        # No llamamos scene.start() aquí (bloquea la ventana)
+        scene.start()
 
     def on_draw(self):  # por cada frame
         self.clear()

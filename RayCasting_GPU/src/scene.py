@@ -3,7 +3,7 @@ import glm
 import numpy as np
 from graphics import ComputeGraphics
 import moderngl
-from raytracer import RayTracerGPU
+from raytracer import RayTracerGPU, RayTracer
 
 
 class Scene:
@@ -48,8 +48,28 @@ class Scene:
         self.ctx.viewport = (0, 0 , width, height)
         self.camera.projection = glm.perspective(glm.radians(45), width / height, 0.1, 100.0)
 
+
+class RayScene(Scene):
+    def __init__(self, ctx, camera, width, height):
+        super().__init__(ctx, camera)
+        self.raytracer = RayTracer(camera, width, height)
+
+    def start(self):
+        self.raytracer.render_frame(self.objects)
+        if "Sprite" in self.graphics:
+            self.graphics["Sprite"].update_texture("u_texture", self.raytracer.get_texture())
+
+    def render(self):
+       super().render()
+
+    def on_resize(self, width, height):
+        super().on_resize(width, height)
+        self.raytracer = RayTracer(self.camera, width, height)
+        self.start()
+
 class RaySceneGPU(Scene):
     def __init__(self, ctx, camera, width, height, output_model, output_material):
+        super().__init__(ctx, camera) #va antes de todo por el self.graphics se borra sino
         self.ctx = ctx
         self.camera = camera
         self.width = width
@@ -59,13 +79,15 @@ class RaySceneGPU(Scene):
         self.output_graphics = ComputeGraphics(ctx, output_model, output_material)
         self.raytracer = RayTracerGPU(self.ctx, self.camera, self.width, self.height, self.output_graphics)
 
-        super().__init__(ctx, camera)
+        
         
 
     def on_resize(self, width, height):
         super().on_resize(width, height)
         self.width, self.height = width, height
         self.camera.aspect = width/height
+        if self.raytracer:
+            self.raytracer.resize(width, height)
 
     def start(self):
         print("Start Raytracing!")

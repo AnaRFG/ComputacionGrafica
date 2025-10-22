@@ -6,16 +6,11 @@ class Graphics:
     def __init__(self, ctx, model, material):
         self.__ctx = ctx
         self.__model = model
-        self.__material = material   # cambie la definicion 
+        self.__material = material  
        
         self.__vbo = self.create_buffers()
         self.__ibo = self.__ctx.buffer(model.indices.tobytes())
-
-        vao_content = []
-        for attr_name, vbo in self.__vbo:
-            vao_content.append((vbo, '3f', attr_name))  # formato de atributo (3 floats)
-
-        self.__vao = self.__ctx.vertex_array(material.shader_program.prog, vao_content, self.__ibo)
+        self.__vao = self.__ctx.vertex_array(material.shader_program.prog, [*self.__vbo], self.__ibo)
 
 
         self.__textures = self.load_textures(material.textures_data)
@@ -26,7 +21,7 @@ class Graphics:
 
         for attr_name, attr_data in self.__model.vertex_layout.get_attributes():
             if attr_name in shader_attributes:
-                vbo = self.__ctx.buffer(attr_data.astype('f4').tobytes())  # 🔧 corregido: __ctx
+                vbo = self.__ctx.buffer(attr_data.astype('f4').tobytes())  
                 buffers.append((attr_name, vbo)) 
         return buffers
 
@@ -35,10 +30,8 @@ class Graphics:
         for texture in textures_data:  
             if texture.image_data:
                 texture_ctx = self.__ctx.texture(texture.size, texture.channels_amount, texture.get_bytes())
-
             if texture.build_mipmaps:
                 texture_ctx.build_mipmaps()
-
             texture_ctx.repeat_x = texture.repeat_x
             texture_ctx.repeat_y = texture.repeat_y
 
@@ -54,8 +47,8 @@ class Graphics:
             if name in self.__material.shader_program.prog:
                 self.__material.set_uniform(name, value)
 
-        for i, (name, (texture_obj, texture_ctx)) in enumerate(self.__textures.items()):
-            texture_ctx.use(i)
+        for i, (name, (tex, tex_ctx)) in enumerate(self.__textures.items()):
+            tex_ctx.use(i)
             self.__material.shader_program.set_uniform(name, i)
 
         self.__vao.render()
@@ -68,7 +61,6 @@ class Graphics:
         texture_obj.update_data(new_data)
         texture_ctx.write(new_data.tobytes())
 
-        self.__vao.render()
 
 class ComputeGraphics(Graphics):
     def __init__(self, ctx, model,material):
