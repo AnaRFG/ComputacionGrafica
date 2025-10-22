@@ -8,7 +8,7 @@ from camera import Camera
 from scene import Scene, RayScene
 import numpy as np
 
-WIDTH, HEIGHT = 200, 150
+WIDTH, HEIGHT = 400, 300
 window = Window(WIDTH, HEIGHT, "Basic Graphic Engine")
 
 shader_program = ShaderProgram(window.ctx, 'shaders/basic.vert', 'shaders/basic.frag')
