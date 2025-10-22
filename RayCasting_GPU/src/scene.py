@@ -1,7 +1,7 @@
 import math
 import glm
 import numpy as np
-from graphics import ComputeGraphics
+from graphics import ComputeGraphics, Graphics
 import moderngl
 from raytracer import RayTracerGPU, RayTracer
 
@@ -24,7 +24,7 @@ class Scene:
 
     def add_object(self, model, material):
         self.objects.append(model)
-        self.graphics[model.name] = ComputeGraphics(self.ctx, model, material)
+        self.graphics[model.name] = Graphics(self.ctx, model, material)
 
     def render(self): 
         self.time += 0.01 # en el constructor self.time = 0
@@ -98,7 +98,7 @@ class RaySceneGPU(Scene):
         self.mats_f = np.zeros((n,4), dtype='f4')
 
         self._update_matrix()
-        self._matrix_to_ssbo(self.primitives)
+        self._matrix_to_ssbo()
 
     def render(self):
         self.time += 0.01
@@ -121,7 +121,7 @@ class RaySceneGPU(Scene):
             graphics.create_inverse_transformation_matrix(self.inv_f, i)
             graphics.create_material_matrix(self.mats_f, i)
 
-    def _matrix_to_ssbo(self, primitives, binding = 3):
+    def _matrix_to_ssbo(self):
         self.raytracer.matrix_to_ssbo(self.models_f, 0)
         self.raytracer.matrix_to_ssbo(self.inv_f, 1)
         self.raytracer.matrix_to_ssbo(self.mats_f, 2)

@@ -19,10 +19,10 @@ class Graphics:
         buffers = []
         shader_attributes = self.__material.shader_program.attributes  # usar self.material
 
-        for attr_name, attr_data in self.__model.vertex_layout.get_attributes():
-            if attr_name in shader_attributes:
-                vbo = self.__ctx.buffer(attr_data.astype('f4').tobytes())  
-                buffers.append((attr_name, vbo)) 
+        for attr in self.__model.vertex_layout.get_attributes():
+            if attr.name in shader_attributes:
+                vbo = self.__ctx.buffer(attr.array.tobytes())  
+                buffers.append((vbo, attr.format, attr.name)) 
         return buffers
 
     def load_textures(self, textures_data):
