@@ -7,7 +7,7 @@ from camera import Camera
 from scene import Scene
 import numpy as np
 
-WIDTH, HEIGHT = 200, 150
+WIDTH, HEIGHT = 800, 600
 window = Window(WIDTH, HEIGHT, "Basic Graphic Engine")
 
 shader_program = ShaderProgram(window.ctx, 'shaders/basic.vert', 'shaders/basic.frag')
