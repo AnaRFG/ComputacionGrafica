@@ -141,7 +141,7 @@ vec3 calculateShading(vec3 surfaceColor, vec3 surfacePosition, vec3 surfaceNorma
     float diffuseIntensity = max(dot(surfaceNormal, LIGHT_DIRECTION), 0.0);
     float specularIntensity = pow(max(dot(normalize(LIGHT_DIRECTION + viewDirection), surfaceNormal), 0.0), 64);
     float shadowFactor = calculateShadow(surfacePosition, surfaceNormal);
-    float ambientFactor = 0.08;
+    float ambientFactor = 0.2;
 
     vec3 ambient = ambientFactor * surfaceColor;
     vec3 diffuse = diffuseIntensity * surfaceColor;
