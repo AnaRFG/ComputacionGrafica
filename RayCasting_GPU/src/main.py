@@ -9,10 +9,10 @@ from quad import Quad
 from raytracer import RayTracerGPU, RayTracer
 
 
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 400, 300
 
 
-SCENE_TYPE = "gpu"  # Opciones: "normal", "cpu", "gpu"
+SCENE_TYPE = "cpu"  # Opciones: "normal", "cpu", "gpu"
 
 
 scene_configs = {
@@ -47,8 +47,7 @@ shader_sprite = ShaderProgram(window.ctx, 'shaders/sprite.vert', 'shaders/sprite
 albedo_red = Texture("u_texture", WIDTH, HEIGHT, 3, None, (200, 10, 190))
 albedo_blue = Texture("u_texture", WIDTH, HEIGHT, 3, None, (0, 0, 255))
 albedo_pearl = Texture("u_texture", WIDTH, HEIGHT, 3, None, (120, 90, 90))
-sprite_texture = Texture(width=WIDTH, height=HEIGHT, channels_amount= config["sprite_channels_amount"], color= config["sprite_default_color"])
-
+sprite_texture = Texture(width=WIDTH, height=HEIGHT, channels_amount=config["sprite_channels_amount"], color=config["sprite_default_color"])
 
 material_plastic = StandardMaterial(shader, albedo_red, reflectivity=0.0)
 material_glass = StandardMaterial(shader, albedo_blue, reflectivity=0.2)
@@ -78,6 +77,7 @@ elif SCENE_TYPE == "cpu":
     scene.add_object(cube1, material_plastic)
     scene.add_object(cube2, material_glass)
     scene.add_object(quad, material_ceramic)
+    
 
 
 elif SCENE_TYPE == "gpu":

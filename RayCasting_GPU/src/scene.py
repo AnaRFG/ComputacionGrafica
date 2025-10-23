@@ -27,9 +27,9 @@ class Scene:
         self.graphics[model.name] = Graphics(self.ctx, model, material)
 
     def render(self): 
-        self.time += 0.01 # en el constructor self.time = 0
+        self.time += 0.01 
         for obj in self.objects:
-            if(obj.animated):
+            if(obj.name != "Sprite"):
                 obj.rotation += glm.vec3(0.8, 0.6, 0.4)
                 obj.position.x += math.sin(self.time) * 0.01
             
@@ -76,9 +76,12 @@ class RaySceneGPU(Scene):
         self.height = height
         self.raytracer = None
 
-        self.output_graphics = ComputeGraphics(ctx, output_model, output_material)
+        self.output_graphics = Graphics(ctx, output_model, output_material)
         self.raytracer = RayTracerGPU(self.ctx, self.camera, self.width, self.height, self.output_graphics)
 
+    def add_object(self, model, material):
+        self.objects.append(model)
+        self.graphics[model.name] = ComputeGraphics(self.ctx, model, material)
         
         
 
